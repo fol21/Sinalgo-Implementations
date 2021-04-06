@@ -1,29 +1,22 @@
-# README #
+# SINALGO DISTRIBUTED ALGORITHMS #
 
-This README would normally document whatever steps are necessary to get your application up and running.
 
-### What is this repository for? ###
+# What is this repository for? #
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+This repository is a bundle of distributed algorithms implemented by LAC PUC-Rio.
 
-### How do I get set up? ###
+# How do I get set up? #
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+Address [SINALGO's Github repository](https://github.com/Sinalgo/sinalgo) for instructions on how to use it.
 
-### Contribution guidelines ###
+# Implemented Algorithms #
 
-* Writing tests
-* Code review
-* Other guidelines
+| Algorithm        				| Implementation 	| Version   |
+| ----------------------------- |:---------------:| -----------:|
+| Lamport timestamp algorithm   | In Progress 		| 1.0 		|
+| 2 Token Ring 					| Not Started   	| 1.0 		|
+| 2N Token Ring  				| Not Started   	| 1.0 		|
 
-### Who do I talk to? ###
+# Who do I talk to? #
 
-* Repo owner or admin
-* Other community or team contact
+Markus Endler <endler@inf.puc-rio.br>
