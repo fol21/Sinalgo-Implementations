@@ -1,27 +1,43 @@
 package projects.tokenring2.nodes.nodeImplementations;
 
+import com.apple.eawt.Application;
+
 import lombok.Getter;
 import lombok.Setter;
 import projects.defaultProject.nodes.timers.MessageTimer;
+import projects.tokenring2.nodes.app.ApplicationEvent;
+import projects.tokenring2.nodes.app.DummyApplication;
+import projects.tokenring2.nodes.messages.CriticalSessionMessage;
 import projects.tokenring2.nodes.messages.TokenMessage;
 import sinalgo.exception.WrongConfigurationException;
+import sinalgo.gui.transformation.PositionTransformation;
 import sinalgo.nodes.Node;
 import sinalgo.nodes.edges.Edge;
 import sinalgo.nodes.messages.Inbox;
 import sinalgo.nodes.messages.Message;
 import sinalgo.tools.logging.Logging;
 
+import java.awt.*;
+
 
 @Getter
 @Setter
 public class TokenNode2 extends Node {
     
-    Logging log = Logging.getLogger("token_node_log");
+    Logging log = Logging.getLogger();
 
     /**
      * the neighbor with the smallest ID
      */
     private TokenNode2 next;
+
+    @Getter
+    private boolean waiting = false;
+    
+    private DummyApplication app = new DummyApplication();
+
+    private long token = 0L;
+    private long validationToken = 0L;
 
     // a flag to prevent all nodes from sending messages
     @Getter
@@ -35,18 +51,42 @@ public class TokenNode2 extends Node {
         }
         if (inbox.hasNext()) {
             Message msg = inbox.next();
-            if (msg instanceof TokenMessage) {
-                TokenMessage m = (TokenMessage) msg;
-                if(!(m.isEvaluation())) {
-                    if (this.getNext() != null) {
-                        m.incrementData();
-                        //Update Tokens
+            if(msg instanceof CriticalSessionMessage)
+            {
+                CriticalSessionMessage m = (CriticalSessionMessage) msg;
+                this.log.logln("[Region]Target ID: " + m.getNodeId() + ", Node Id: " + this.getID());
+                if(m.getNodeId() == this.getID())
+                {
+                    this.log.logln("[Region] Found Id");
+                    if(m.getEvent() == ApplicationEvent.ENTER_REGION)
+                    {
+                        this.app.exitRegion();
+                        this.setColor(Color.BLACK);
+                        this.broadcast(new TokenMessage(this.token, m.getNodeId()));
                     }
                 } else {
-                    //update Validation Token
-                    if (this.getNext() != null) {
-                        m.decreaseData();
+                    this.broadcast(m);
+                }
+
+            }
+            if (msg instanceof TokenMessage)
+            {
+                TokenMessage m = (TokenMessage) msg;
+                this.log.logln("[Token] Target ID: " + m.getTargetId() + ", Node Id: " + this.getID());
+                if(m.getTargetId() == this.getID())
+                {
+                    this.log.logln("[Token] Found Id");
+                    if(this.waiting)
+                    {
+                        this.app.enterRegion();
+                        this.waiting = false;
+                        if(!m.isEvaluation()) {
+                            this.token = m.getData();
+                            this.setColor(Color.RED);
+                        }
                     }
+                } else {
+                    this.broadcast(m);
                 }
             }
         }
@@ -91,6 +131,16 @@ public class TokenNode2 extends Node {
     public void checkRequirements() throws WrongConfigurationException {
     }
 
+    @NodePopupMethod(menuText="[App] Enter Region")
+    public void appEnterRegion() {
+        this.broadcast(new CriticalSessionMessage(this.getID(), ApplicationEvent.ENTER_REGION));
+    }
+
+    @NodePopupMethod(menuText="[App] Exit Region")
+    public void appExitRegion() {
+        this.broadcast(new CriticalSessionMessage(this.getID(), ApplicationEvent.EXIT_REGION));
+    }
+
     @NodePopupMethod(menuText="Cast Token")
     public void castTokenpMethod() {
         _castToken(false);
@@ -100,8 +150,15 @@ public class TokenNode2 extends Node {
         _castToken(true);
     }
 
+    @Override
+    public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
+        super.drawNodeAsSquareWithText(g, pt, highlight, Long.toString(this.getID()), 16, Color.WHITE);
+    }
+
     private void _castToken(boolean validation) {
-        TokenMessage msg = new TokenMessage(validation, 2000L);
+        java.util.Random rand = sinalgo.tools.Tools.getRandomNumberGenerator();
+
+        TokenMessage msg = new TokenMessage(validation, rand.nextLong(), 0L);
         MessageTimer timer = new MessageTimer(msg);
         timer.startRelative(1, this);
     }

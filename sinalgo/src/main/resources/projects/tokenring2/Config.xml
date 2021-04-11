@@ -20,7 +20,7 @@
         <!-- Simulation -->
         <!--*********************************************************************** -->
         <!--Switches between synchronous and asynchronous mode. -->
-        <asynchronousMode value="false"/>
+        <asynchronousMode value="true"/>
 
         <!--If set to true, the runtime obtains for each node a new position from
             the mobility model at the beginning of each round. This flag needs to be
@@ -150,7 +150,7 @@
         <defaultConnectivityModel value="UDG"/>
 
         <!--Default distribution model used when none is specified -->
-        <defaultDistributionModel value="Random"/>
+        <defaultDistributionModel value="Circle"/>
 
         <!--Default interference model used when none is specified -->
         <defaultInterferenceModel value="NoInterference"/>
@@ -162,7 +162,7 @@
         <defaultReliabilityModel value="ReliableDelivery"/>
 
         <!--Default node implementation used when none is specified -->
-        <defaultNodeImplementation value="DummyNode"/>
+        <defaultNodeImplementation value="tokenring2:TokenNode2"/>
 
         <!--Show the models implemented by all projects in the drop down options.
             When set to false, only the models by the selected project and the default
@@ -238,9 +238,9 @@
 
         <Node defaultSize="10"/>
 
-        <GeometricNodeCollection rMax="100"/>
+        <GeometricNodeCollection rMax="500"/>
 
-        <UDG rMax="100"/>
+        <UDG rMax="500"/>
 
         <SINR alpha="2" beta="0.7" noise="0"/>
 

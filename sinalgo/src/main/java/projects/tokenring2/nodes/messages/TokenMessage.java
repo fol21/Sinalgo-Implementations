@@ -1,8 +1,6 @@
 package projects.tokenring2.nodes.messages;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import sinalgo.nodes.messages.Message;
 
@@ -12,13 +10,29 @@ import sinalgo.nodes.messages.Message;
  */
 @Getter
 @Setter
-@AllArgsConstructor
 public class TokenMessage extends Message {
     
     private boolean evaluation;
 
     private long data;
 
+    private long targetId;
+
+
+    public TokenMessage(boolean evaluation, long data, long targetId)
+    {
+        this.evaluation = evaluation;
+        this.data = data;
+        this.targetId = targetId;
+    }
+    
+    public TokenMessage(long data, long targetId)
+    {
+        this.evaluation = false;
+        this.data = data;
+        this.targetId = targetId;
+    }
+    
     /**
      * Increments the value of the data by one.
      */
@@ -39,6 +53,6 @@ public class TokenMessage extends Message {
 
     @Override
     public Message clone() {
-        return new TokenMessage(this.evaluation, this.data);
+        return new TokenMessage(this.evaluation, this.data, this.targetId);
     }
 }
