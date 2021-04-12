@@ -2,19 +2,21 @@ package projects.raTimestamp.nodes.nodeImplementations;
 
 import lombok.Getter;
 import lombok.Setter;
+import projects.raTimestamp.nodes.messages.RATimestampMessage;
 import sinalgo.exception.WrongConfigurationException;
 import sinalgo.gui.GraphPanel;
 import sinalgo.gui.transformation.PositionTransformation;
 import sinalgo.nodes.Node;
 import sinalgo.nodes.edges.Edge;
 import sinalgo.nodes.messages.Inbox;
+import sinalgo.nodes.messages.Message;
 import sinalgo.tools.logging.Logging;
 
 import java.awt.*;
 
 @Getter
 @Setter
-public class RATimestampNode extends Node {
+public class RATimestampNode extends LamportTimestampNode {
 
     Logging log = Logging.getLogger();
 
@@ -37,7 +39,18 @@ public class RATimestampNode extends Node {
     @Override
     public void handleMessages(Inbox inbox)
     {
-       
+        super.handleMessages(inbox);
+        // RA Timestamp
+        if (inbox.hasNext())
+        {
+            Message msg = inbox.next();
+            if(msg instanceof RATimestampMessage)
+            {
+                RATimestampMessage m = (RATimestampMessage) msg;
+                // Lamport TS Update
+                this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
+            }
+        }
     }
     @Override
     public void preStep() {
@@ -89,7 +102,7 @@ public class RATimestampNode extends Node {
 
     @Override
     public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
-        super.drawNodeAsSquareWithText(g, pt, highlight, Long.toString(this.getID()), 16, Color.WHITE);
+        super.draw(g, pt, highlight);
     }
 
 }
