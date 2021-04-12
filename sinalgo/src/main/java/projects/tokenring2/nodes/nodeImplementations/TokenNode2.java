@@ -1,7 +1,5 @@
 package projects.tokenring2.nodes.nodeImplementations;
 
-import com.apple.eawt.Application;
-
 import lombok.Getter;
 import lombok.Setter;
 import projects.defaultProject.nodes.timers.MessageTimer;
