@@ -82,7 +82,7 @@ public class LamportTimestampNode extends Node {
 
     @Override
     public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
-        super.drawNodeAsSquareWithText(g, pt, highlight, Long.toString(this.getID()), 16, Color.WHITE);
+        super.drawNodeAsSquareWithText(g, pt, highlight, Long.toString(this.getID()) + '(' + Long.toString(this.lamportTimestamp) + ')', 16, Color.WHITE);
     }
 
     // Actions

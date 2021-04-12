@@ -88,7 +88,7 @@ public class RATimestampNode extends Node {
     }
 
     @Override
-    public void draw(GraphPanel g, PositionTransformation pt, boolean highlight) {
+    public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
         super.drawNodeAsSquareWithText(g, pt, highlight, Long.toString(this.getID()), 16, Color.WHITE);
     }
 
