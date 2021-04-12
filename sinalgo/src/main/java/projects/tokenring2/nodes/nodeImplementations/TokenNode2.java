@@ -64,10 +64,7 @@ public class TokenNode2 extends Node {
                         this.setColor(Color.BLACK);
                         this.broadcast(new TokenMessage(this.token, m.getNodeId()));
                     }
-                } else {
-                    this.broadcast(m);
-                }
-
+                } 
             }
             if (msg instanceof TokenMessage)
             {
@@ -85,8 +82,6 @@ public class TokenNode2 extends Node {
                             this.setColor(Color.RED);
                         }
                     }
-                } else {
-                    this.broadcast(m);
                 }
             }
         }
