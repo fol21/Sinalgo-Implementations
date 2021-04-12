@@ -13,9 +13,11 @@ Address [SINALGO's Github repository](https://github.com/Sinalgo/sinalgo) for in
 
 | Algorithm        				| Implementation 	| Version   |
 | ----------------------------- |:---------------:| -----------:|
-| Lamport timestamp algorithm   | In Progress 		| 1.0 		|
-| 2 Token Ring 					| Not Started   	| 1.0 		|
+| Lamport timestamp algorithm   | Done 		        | 1.0 		|
+| 2 Token Ring 					| In Progress   	| 1.0 		|
 | 2N Token Ring  				| Not Started   	| 1.0 		|
+| Ricart-Agrawala timestamp 	| In Progress   	| 1.0 		|
+
 
 # Who do I talk to? #
 

@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import projects.raTimestamp.nodes.messages.RATimestampMessage;
 import sinalgo.exception.WrongConfigurationException;
-import sinalgo.gui.GraphPanel;
 import sinalgo.gui.transformation.PositionTransformation;
 import sinalgo.nodes.Node;
 import sinalgo.nodes.edges.Edge;

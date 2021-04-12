@@ -101,7 +101,7 @@ public class LamportTimestampNode extends Node {
                 MessageTimer timer = new MessageTimer(msg, n);
                 timer.startRelative(1.0, this);
             }
-        }, "Select a node to which you want to send a tick Lampoert Timestamp Message.");
+        }, "Select a node to which you want to send a tick Lamport Timestamp Message.");
     }
     
     @NodePopupMethod(menuText="Multicast Tick TS")
