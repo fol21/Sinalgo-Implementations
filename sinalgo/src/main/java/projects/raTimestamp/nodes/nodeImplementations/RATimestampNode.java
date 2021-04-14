@@ -2,7 +2,9 @@ package projects.raTimestamp.nodes.nodeImplementations;
 
 import lombok.Getter;
 import lombok.Setter;
-import projects.raTimestamp.nodes.messages.RATimestampMessage;
+import projects.raTimestamp.nodes.app.ApplicationEvent;
+import projects.raTimestamp.nodes.messages.RATimestampReplyMessage;
+import projects.raTimestamp.nodes.messages.RATimestampRequestMessage;
 import sinalgo.exception.WrongConfigurationException;
 import sinalgo.gui.transformation.PositionTransformation;
 import sinalgo.nodes.Node;
@@ -10,8 +12,11 @@ import sinalgo.nodes.edges.Edge;
 import sinalgo.nodes.messages.Inbox;
 import sinalgo.nodes.messages.Message;
 import sinalgo.tools.logging.Logging;
+import sinalgo.tools.storage.ReusableListIterator;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -26,9 +31,17 @@ public class RATimestampNode extends LamportTimestampNode {
 
     @Getter
     private boolean waiting = false;
+
+    @Getter
+    @Setter
+    private long requestTimestamp = -1;
+
+    private ApplicationEvent appEvent = ApplicationEvent.OFF;
+
+    private int pending = -1;
+
+    private List<Long> replyDeferred = new ArrayList<Long>();
     
-    private long token = 0L;
-    private long validationToken = 0L;
 
     // a flag to prevent all nodes from sending messages
     @Getter
@@ -38,16 +51,38 @@ public class RATimestampNode extends LamportTimestampNode {
     @Override
     public void handleMessages(Inbox inbox)
     {
-        super.handleMessages(inbox);
         // RA Timestamp
         if (inbox.hasNext())
         {
             Message msg = inbox.next();
-            if(msg instanceof RATimestampMessage)
+            if(msg instanceof RATimestampReplyMessage)
             {
-                RATimestampMessage m = (RATimestampMessage) msg;
+                RATimestampReplyMessage m = (RATimestampReplyMessage) msg;
+                this.log.logln("Node: " + this.getID() + " " + "recv(REPLY, " + m.getTimestamp());
                 // Lamport TS Update
                 this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
+                
+                this.pending--;
+                if(this.pending == 0)
+                {
+                    this.appEvent = ApplicationEvent.IN;
+                    this.setColor(Color.RED);
+                }
+            }
+            if(msg instanceof RATimestampRequestMessage)
+            {
+                RATimestampRequestMessage m = (RATimestampRequestMessage) msg;
+                this.log.logln("Node: " + this.getID() + " " + "recv(" + m.getNodeId() + ", REQ, " + m.getTimestamp());
+                // Lamport TS Update
+                this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
+
+                if(this.appEvent == ApplicationEvent.OFF || requestTimestamp > m.getTimestamp())
+                {
+                    this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(m.getNodeId()));
+                }
+                else {
+                    this.replyDeferred.add(m.getNodeId());
+                }
             }
         }
     }
@@ -93,15 +128,42 @@ public class RATimestampNode extends LamportTimestampNode {
 
     @NodePopupMethod(menuText="[App] Enter Region")
     public void appEnterRegion() {
+        this.requestTimestamp = this.getLamportTimestamp();
+        this.appEvent = ApplicationEvent.HOLD;
+        this.pending = this.getOutgoingConnections().size() - 1;
+        this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
     }
 
     @NodePopupMethod(menuText="[App] Exit Region")
     public void appExitRegion() {
+        try {
+            this.appEvent = ApplicationEvent.OFF;
+            this.pending = -1;
+            this.setColor(Color.BLACK);
+            this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(this.replyDeferred.get(0)));
+            this.replyDeferred.remove(0);
+        } catch (Exception e) {
+            this.log.logln(e.getMessage());
+
+        }
     }
 
     @Override
     public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
         super.draw(g, pt, highlight);
+    }
+
+    private Node findEndNodeById(long ID)
+    {
+        ReusableListIterator<Edge> it = this.getOutgoingConnections().iterator();
+        while (it.hasNext())
+        {
+            Node n = it.next().getEndNode();
+            if(n.getID() == ID) {
+                return n;
+            }
+        }
+        return null;
     }
 
 }
