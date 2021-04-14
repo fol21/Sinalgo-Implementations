@@ -130,7 +130,7 @@ public class RATimestampNode extends LamportTimestampNode {
     public void appEnterRegion() {
         this.requestTimestamp = this.getLamportTimestamp();
         this.appEvent = ApplicationEvent.HOLD;
-        this.pending = this.getOutgoingConnections().size() - 1;
+        this.pending = this.getOutgoingConnections().size();
         this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
     }
 
