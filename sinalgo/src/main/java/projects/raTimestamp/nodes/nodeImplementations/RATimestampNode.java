@@ -82,6 +82,7 @@ public class RATimestampNode extends LamportTimestampNode {
                 }
                 else {
                     this.replyDeferred.add(m.getNodeId());
+                    this.log.logln("Replies to Defer:"  + this.replyDeferred.toString());
                 }
             }
         }
@@ -128,22 +129,34 @@ public class RATimestampNode extends LamportTimestampNode {
 
     @NodePopupMethod(menuText="[App] Enter Region")
     public void appEnterRegion() {
-        this.requestTimestamp = this.getLamportTimestamp();
-        this.appEvent = ApplicationEvent.HOLD;
-        this.pending = this.getOutgoingConnections().size();
-        this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+        if(this.appEvent == ApplicationEvent.OFF)
+        {
+            this.requestTimestamp = this.getLamportTimestamp();
+            this.appEvent = ApplicationEvent.HOLD;
+            this.pending = this.getOutgoingConnections().size();
+            this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+        } else
+        {
+            this.log.logln("Already In Application or in error.");
+        }
     }
 
     @NodePopupMethod(menuText="[App] Exit Region")
     public void appExitRegion() {
         try {
-            this.appEvent = ApplicationEvent.OFF;
-            this.pending = -1;
-            this.setColor(Color.BLACK);
-            if(this.replyDeferred.size() > 0)
+            if(this.appEvent == ApplicationEvent.IN)
             {
-                this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(this.replyDeferred.get(0)));
-                this.replyDeferred.remove(0);
+                this.appEvent = ApplicationEvent.OFF;
+                this.pending = -1;
+                this.setColor(Color.BLACK);
+                if(this.replyDeferred.size() > 0)
+                {
+                    this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(this.replyDeferred.get(0)));
+                    this.replyDeferred.remove(0);
+                }
+
+            } else {
+                this.log.logln("Already Off Application or in error.");
             }
         } catch (Exception e) {
             this.log.logln(e.getMessage());
