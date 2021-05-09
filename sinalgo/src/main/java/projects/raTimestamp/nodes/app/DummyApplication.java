@@ -13,6 +13,6 @@ public class DummyApplication implements IApplication {
     
     public ApplicationEvent exitRegion() {
         this.running = false;
-        return ApplicationEvent.OFF;
+        return ApplicationEvent.OUT;
     }
 }

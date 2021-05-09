@@ -36,9 +36,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package projects.raTimestamp;
 
+import sinalgo.configuration.Configuration;
+import sinalgo.exception.CorruptConfigurationEntryException;
+import sinalgo.exception.SinalgoFatalException;
 import sinalgo.runtime.AbstractCustomGlobal;
+import sinalgo.runtime.Global;
+import sinalgo.tools.Tools;
+import sinalgo.tools.logging.Logging;
 
 import javax.swing.*;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.AccessLevel;
 
 /**
  * This class holds customized global state and methods for the framework. The
@@ -59,12 +69,62 @@ import javax.swing.*;
  * framework with custom methods that can be called either through the menu
  * or via a button that is added to the GUI.
  */
+@Getter(AccessLevel.PRIVATE)
+@Setter(AccessLevel.PRIVATE)
 public class CustomGlobal extends AbstractCustomGlobal {
 
-    @Override
-    public boolean hasTerminated() {
-        return false;
-    }
+  private Logging log = Logging.getLogger();
+
+  // The user can optionally specify exitAfter in the config file to indicate
+  // after how many rounds the simulation should stop.
+  private boolean exitAfterFixedRounds;
+  private int exitAfterNumRounds;
+
+  {
+      if (Configuration.hasParameter("exitAfter")) {
+          try {
+              this.setExitAfterFixedRounds(Configuration.getBooleanParameter("exitAfter"));
+          } catch (CorruptConfigurationEntryException e1) {
+              throw new SinalgoFatalException("The 'exitAfter' needs to be a valid boolean.");
+          }
+          if (this.isExitAfterFixedRounds()) {
+              try {
+                  this.setExitAfterNumRounds(Configuration.getIntegerParameter("exitAfter/rounds"));
+              } catch (CorruptConfigurationEntryException e) {
+                  throw new SinalgoFatalException(
+                          "The 'exitAfter/rounds' parameter specifies the maximum time the simulation runs. It needs to be a valid integer.");
+              }
+          }
+      } else {
+          this.setExitAfterFixedRounds(false);
+      }
+  }
+
+  @Override
+  public boolean hasTerminated() {
+      if (this.isExitAfterFixedRounds()) {
+          return this.getExitAfterNumRounds() <= Global.getCurrentTime();
+      }
+
+      if (Tools.isSimulationInGuiMode()) {
+          return false; // in GUI mode, have the user decide when to stop.
+      } else {
+          return Global.getCurrentTime() > 100000; // stop after x rounds
+      }
+  }
+
+  
+
+  @Override
+  public void preRun() {
+      // start the communication automatically if the AutoStart flag is set.
+
+  }
+
+  @Override
+  public void postRound() {
+      this.getLog().logln("***** Round " + Integer.toString((int) (Global.getCurrentTime()))+"*****");
+  }
 
     /**
      * An example of a method that will be available through the menu of the GUI.

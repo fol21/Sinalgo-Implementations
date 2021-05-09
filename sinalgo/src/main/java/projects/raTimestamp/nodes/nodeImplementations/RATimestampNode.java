@@ -2,6 +2,7 @@ package projects.raTimestamp.nodes.nodeImplementations;
 
 import lombok.Getter;
 import lombok.Setter;
+import projects.defaultProject.nodes.timers.MessageTimer;
 import projects.raTimestamp.nodes.app.ApplicationEvent;
 import projects.raTimestamp.nodes.messages.RATimestampReplyMessage;
 import projects.raTimestamp.nodes.messages.RATimestampRequestMessage;
@@ -11,6 +12,8 @@ import sinalgo.nodes.Node;
 import sinalgo.nodes.edges.Edge;
 import sinalgo.nodes.messages.Inbox;
 import sinalgo.nodes.messages.Message;
+import sinalgo.runtime.Global;
+import sinalgo.tools.Tools;
 import sinalgo.tools.logging.Logging;
 import sinalgo.tools.storage.ReusableListIterator;
 
@@ -23,6 +26,7 @@ import java.util.List;
 public class RATimestampNode extends LamportTimestampNode {
 
     Logging log = Logging.getLogger();
+    Logging lamportLog = Logging.getLogger("lamport/lamport.txt");
 
     /**
      * the neighbor with the smallest ID
@@ -36,7 +40,7 @@ public class RATimestampNode extends LamportTimestampNode {
     @Setter
     private long requestTimestamp = -1;
 
-    private ApplicationEvent appEvent = ApplicationEvent.OFF;
+    private ApplicationEvent appEvent = ApplicationEvent.OUT;
 
     private int pending = -1;
 
@@ -52,21 +56,22 @@ public class RATimestampNode extends LamportTimestampNode {
     public void handleMessages(Inbox inbox)
     {
         // RA Timestamp
-        if (inbox.hasNext())
+        while (inbox.hasNext())
         {
             Message msg = inbox.next();
             if(msg instanceof RATimestampReplyMessage)
             {
                 RATimestampReplyMessage m = (RATimestampReplyMessage) msg;
-                this.log.logln("Node: " + this.getID() + " " + "recv(REPLY, " + m.getTimestamp() + ")");
+                this.pending--;
+                this.log.logln("Node: " + this.getID() + " " + "recv(" + m.getNodeId() + ", REPLY, " + m.getTimestamp() + ") " + this.pending + " pending(s) remaining.");
                 // Lamport TS Update
                 this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
                 
-                this.pending--;
                 if(this.pending == 0)
                 {
                     this.appEvent = ApplicationEvent.IN;
                     this.setColor(Color.RED);
+                    this.log.logln("Node: " + this.getID() + " In App TS: " + this.getLamportTimestamp());
                 }
             }
             if(msg instanceof RATimestampRequestMessage)
@@ -76,23 +81,51 @@ public class RATimestampNode extends LamportTimestampNode {
                 // Lamport TS Update
                 this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
 
-                if(this.appEvent == ApplicationEvent.OFF || requestTimestamp > m.getTimestamp())
+                Node sendToNode = this.findEndNodeById(m.getNodeId());
+                boolean tiebreak = 
+                    this.appEvent == ApplicationEvent.HOLD &&
+                    requestTimestamp == m.getTimestamp() &&
+                    this.getID() > sendToNode.getID();
+                    
+                if(
+                    this.appEvent == ApplicationEvent.OUT || 
+                    (this.appEvent == ApplicationEvent.HOLD && requestTimestamp > m.getTimestamp()) || 
+                    tiebreak
+                )
                 {
-                    this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(m.getNodeId()));
+                    this.send(new RATimestampReplyMessage(this.getLamportTimestamp(), this.getID()), sendToNode); 
                 }
+
                 else {
                     this.replyDeferred.add(m.getNodeId());
-                    this.log.logln("Replies to Defer:"  + this.replyDeferred.toString());
+                    this.log.logln("Node " + this.getID() + ": Replies to Defer: "  + this.replyDeferred.toString());
                 }
+            }
+
+        }
+        if(Math.random() * 100 >= 98){
+            if(this.appEvent == ApplicationEvent.OUT){
+                this.appEnterRegion();
             }
         }
     }
-    @Override
-    public void preStep() {
-    }
-
+ 
     @Override
     public void init() {
+    }
+
+    
+    @Override
+    public void preStep() {
+        this.requestTimestamp = this.getLamportTimestamp();
+        if(Math.random() * 100 >= 75){
+            if(this.appEvent == ApplicationEvent.IN){
+                this.appExitRegion();
+            }
+            if(this.appEvent == ApplicationEvent.HOLD){
+                this.appGiveUp();
+            }
+        }
     }
 
     @Override
@@ -129,12 +162,28 @@ public class RATimestampNode extends LamportTimestampNode {
 
     @NodePopupMethod(menuText="[App] Enter Region")
     public void appEnterRegion() {
-        if(this.appEvent == ApplicationEvent.OFF)
+        if(this.appEvent == ApplicationEvent.OUT)
         {
+            this.setColor(Color.ORANGE);
             this.requestTimestamp = this.getLamportTimestamp();
             this.appEvent = ApplicationEvent.HOLD;
             this.pending = this.getOutgoingConnections().size();
-            this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+            if(Tools.isSimulationRunning())
+            {
+                this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+            }
+            else
+            {
+                if (Tools.isSimulationInAsynchroneMode()) {
+                    this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+                } else {
+                    // we need to set a timer, such that the message is
+                    // sent during the next round, when this node performs its step.
+                    MessageTimer timer = new MessageTimer(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
+                    timer.startRelative(1.0, this);
+                }
+            }
+            this.log.logln("Node " + this.getID() + " is " + "in HOLD.");
         } else
         {
             this.log.logln("Already In Application or in error.");
@@ -144,15 +193,19 @@ public class RATimestampNode extends LamportTimestampNode {
     @NodePopupMethod(menuText="[App] Exit Region")
     public void appExitRegion() {
         try {
-            if(this.appEvent == ApplicationEvent.IN)
+            if(this.appEvent == ApplicationEvent.IN || this.appEvent == ApplicationEvent.HOLD)
             {
-                this.appEvent = ApplicationEvent.OFF;
+                this.appEvent = ApplicationEvent.OUT;
                 this.pending = -1;
                 this.setColor(Color.BLACK);
+                this.log.logln("Node " + this.getID() + " is " + "OFF.");
                 if(this.replyDeferred.size() > 0)
                 {
-                    this.send(new RATimestampReplyMessage(this.getLamportTimestamp()), this.findEndNodeById(this.replyDeferred.get(0)));
-                    this.replyDeferred.remove(0);
+                    for (Long l : this.replyDeferred) {
+                        this.log.logln("Node " + this.getID() + ": Deferring: "  + this.replyDeferred.remove(this.replyDeferred.indexOf(l)).toString());
+                        this.send(new RATimestampReplyMessage(this.getLamportTimestamp(), this.getID()), this.findEndNodeById(l));              
+                    }
+                    this.replyDeferred.clear();
                 }
 
             } else {
@@ -160,7 +213,28 @@ public class RATimestampNode extends LamportTimestampNode {
             }
         } catch (Exception e) {
             this.log.logln(e.getMessage());
+        }
+    }
 
+    @NodePopupMethod(menuText="[App] Enter Region")
+    public void appGiveUp()
+    {
+        try {
+            if(this.appEvent == ApplicationEvent.HOLD)
+            {
+                this.appEvent = ApplicationEvent.OUT;
+                this.pending = -1;
+                this.setColor(Color.BLACK);
+                this.log.logln("Node " + this.getID() + " is " + "OFF.");
+            } else if(this.appEvent == ApplicationEvent.IN)
+            {
+                this.log.logln("Already In Application or in error.");
+            } else
+            {
+                this.log.logln("Already Out of Application or in error.");
+            }
+        } catch (Exception e) {
+            this.log.logln(e.getMessage());
         }
     }
 
@@ -181,5 +255,4 @@ public class RATimestampNode extends LamportTimestampNode {
         }
         return null;
     }
-
 }

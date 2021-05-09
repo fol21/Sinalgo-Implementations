@@ -4,5 +4,5 @@ public enum ApplicationEvent {
         ERROR,
         HOLD,
         IN,
-        OFF,
+        OUT,
 }
