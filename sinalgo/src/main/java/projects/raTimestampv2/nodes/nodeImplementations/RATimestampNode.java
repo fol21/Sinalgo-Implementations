@@ -1,4 +1,4 @@
-package projects.raTimestamp.nodes.nodeImplementations;
+package projects.raTimestampv2.nodes.nodeImplementations;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -20,7 +20,9 @@ import sinalgo.tools.storage.ReusableListIterator;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 @Getter
 @Setter
@@ -48,6 +50,11 @@ public class RATimestampNode extends LamportTimestampNode {
 
     private List<Long> replyDeferred = new ArrayList<Long>();
     
+
+    //v2
+    private boolean hasPermission = false;
+    private LinkedHashMap<Long, Boolean> pendingMap = new LinkedHashMap<Long, Boolean>();
+
     //Stats
     private int totalMessages = 0;
     private double messageRate = 0;
@@ -81,25 +88,26 @@ public class RATimestampNode extends LamportTimestampNode {
 
                 RATimestampReplyMessage m = (RATimestampReplyMessage) msg;
                 this.pending--;
+                //v2
+                this.pendingMap.put(m.getNodeId(), true);
+
                 this.log.logln("Node: " + this.getID() + " " + "recv(" + m.getNodeId() + ", REPLY, " + m.getTimestamp() + ") " + this.pending + " pending(s) remaining.");
                 // Lamport TS Update
                 this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
                 
-                if(this.pending == 0)
+                if(!this.pendingMap.values().contains(false))
                 {
-                    this.timesHoldRegionPerEvent.addSample(this.getLamportTimestamp() - this.requestTimestamp);
-
-                    this.appEvent = ApplicationEvent.IN;
-                    this.setColor(Color.RED);
-                    this.log.logln("Node: " + this.getID() + " In App TS: " + this.getLamportTimestamp());
+                    this.enterRegion();
                 }
+                this.log.logln("[Neighboors] Node " + this.getID() + " Neighboors: " + this.pendingMap.entrySet());
             }
             if(msg instanceof RATimestampRequestMessage)
             {
                 this.requestsRate = ++this.totalRequests / Tools.getGlobalTime();
 
                 RATimestampRequestMessage m = (RATimestampRequestMessage) msg;
-                this.log.logln("Node: " + this.getID() + " " + "recv(" + m.getNodeId() + ", REQ, " + m.getTimestamp() + ")");
+                this.log.log("Node: " + this.getID() + " " + "recv(" + m.getNodeId() + ", REQ, " + m.getTimestamp() + ")");
+                if(this.requestTimestamp >= 0)  this.log.logln(" REQ TS: " + this.requestTimestamp);
                 // Lamport TS Update
                 this.setLamportTimestamp(Math.max(m.getTimestamp(), this.getLamportTimestamp()) + 1);
 
@@ -108,13 +116,15 @@ public class RATimestampNode extends LamportTimestampNode {
                     this.appEvent == ApplicationEvent.HOLD &&
                     requestTimestamp == m.getTimestamp() &&
                     this.getID() > sendToNode.getID();
-                    
+                
+                this.log.logln("[Neighboors] Node " + this.getID() + " Neighboors: " + this.pendingMap.entrySet());
                 if(
                     this.appEvent == ApplicationEvent.OUT || 
                     (this.appEvent == ApplicationEvent.HOLD && requestTimestamp > m.getTimestamp()) || 
                     tiebreak
                 )
                 {
+                    // this.pendingMap.put(m.getNodeId(), false);
                     this.send(new RATimestampReplyMessage(this.getLamportTimestamp(), this.getID()), sendToNode); 
                 }
 
@@ -125,9 +135,13 @@ public class RATimestampNode extends LamportTimestampNode {
             }
 
         }
-        if(Math.random() * 100 >= 98){
-            if(this.appEvent == ApplicationEvent.OUT){
-                this.appEnterRegion();
+
+        if(Tools.isSimulationInSynchroneMode())
+        {
+            if(Math.random() * 100 >= 98){
+                if(this.appEvent == ApplicationEvent.OUT){
+                    this.appEnterRegion();
+                }
             }
         }
     }
@@ -138,16 +152,25 @@ public class RATimestampNode extends LamportTimestampNode {
 
     
     @Override
-    public void preStep() {
+    public void preStep()
+    {
+        // Set Pending
+        if(this.pendingMap.isEmpty())
+        {
+            for (Edge e : this.getOutgoingConnections()) {
+                this.pendingMap.put(e.getEndNode().getID(), false);
+            }
+            this.log.logln("[Neighboors] Node " + this.getID() + " Neighboors: " + this.pendingMap.entrySet());
+        }
 
         this.requestTimestamp = this.getLamportTimestamp();
         if(Math.random() * 100 >= 75){
             if(this.appEvent == ApplicationEvent.IN){
                 this.appExitRegion();
             }
-            if(this.appEvent == ApplicationEvent.HOLD){
-                this.appGiveUp();
-            }
+            // if(this.appEvent == ApplicationEvent.HOLD){
+            //     this.appGiveUp();
+            // }
         }
     }
 
@@ -162,7 +185,10 @@ public class RATimestampNode extends LamportTimestampNode {
                     this.setNext((RATimestampNode) e.getEndNode());
                 }
             }
+            // Set Pending
+            this.pendingMap.put(e.getEndNode().getID(), false);
         }
+        this.log.logln("[Neighbor] Node " + this.getID() + " Neighboors: " + this.pendingMap.entrySet());
     }
 
     @Override
@@ -207,29 +233,38 @@ public class RATimestampNode extends LamportTimestampNode {
     public void appEnterRegion() {
         if(this.appEvent == ApplicationEvent.OUT)
         {
-            this.setColor(Color.ORANGE);
-            this.requestTimestamp = this.getLamportTimestamp();
-            this.appEvent = ApplicationEvent.HOLD;
-            this.pending = this.getOutgoingConnections().size();
-            if(Tools.isSimulationRunning())
-            {
-                this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
-            }
-            else
-            {
-                if (Tools.isSimulationInAsynchroneMode()) {
-                    this.broadcast(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
-                } else {
-                    // we need to set a timer, such that the message is
-                    // sent during the next round, when this node performs its step.
-                    MessageTimer timer = new MessageTimer(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)));
-                    timer.startRelative(1.0, this);
+                this.setColor(Color.ORANGE);
+                this.requestTimestamp = this.getLamportTimestamp();
+                this.appEvent = ApplicationEvent.HOLD;
+                this.pending = this.getOutgoingConnections().size();
+                if(!this.pendingMap.values().contains(false)) {
+                    this.enterRegion();
                 }
-            }
-            this.log.logln("Node " + this.getID() + " is " + "in HOLD.");
+                for(Entry<Long, Boolean> p : this.pendingMap.entrySet())
+                {
+                    if(!p.getValue())
+                    {
+                        if(Tools.isSimulationRunning())
+                        {                         
+                            this.send(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)), this.findEndNodeById(p.getKey()));
+                        }
+                        else
+                        {
+                            if (Tools.isSimulationInAsynchroneMode()) {
+                                this.send(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)), this.findEndNodeById(p.getKey()));
+                            } else {
+                                // we need to set a timer, such that the message is
+                                // sent during the next round, when this node performs its step.
+                                MessageTimer timer = new MessageTimer(new RATimestampRequestMessage(this.getID(), (this.requestTimestamp)), this.findEndNodeById(p.getKey()));
+                                timer.startRelative(1.0, this);
+                            }
+                        }
+                    }
+                }
+                this.log.logln("Node " + this.getID() + " is " + "in HOLD.");  
         } else
         {
-            this.log.logln("Already In Application or in error.");
+            this.log.logln("Already In Application, on hold or in error.");
         }
     }
 
@@ -261,7 +296,7 @@ public class RATimestampNode extends LamportTimestampNode {
         }
     }
 
-    @NodePopupMethod(menuText="[App] Enter Region")
+    @NodePopupMethod(menuText="[App] Give Up")
     public void appGiveUp()
     {
         try {
@@ -309,5 +344,13 @@ public class RATimestampNode extends LamportTimestampNode {
             }
         }
         return null;
+    }
+
+    private void enterRegion()
+    {
+        this.timesHoldRegionPerEvent.addSample(this.getLamportTimestamp() - this.requestTimestamp);
+        this.appEvent = ApplicationEvent.IN;
+        this.setColor(Color.RED);
+        this.log.logln("Node: " + this.getID() + " In App TS: " + this.getLamportTimestamp());
     }
 }
