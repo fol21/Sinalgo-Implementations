@@ -171,7 +171,10 @@ public class RATimestampNode extends LamportTimestampNode {
         if((int) Math.floor(Tools.getGlobalTime()) % 5000 == 0)
         {
             this.log.logln("***** " + "[Stats] Node " + this.getID() + " Round " + Global.getCurrentTime() + "*****");
-
+            
+            this.log.logln("[Stats] Node " + this.getID() + " Message Total: " +  this.getTotalMessages() + "messages");
+            this.log.logln("[Stats] Node " + this.getID() + " Replies Total: " +  this.getTotalReplies() + "messages");
+            this.log.logln("[Stats] Node " + this.getID() + " Requests Total: " +  this.getTotalRequests() + "messages");
             this.log.logln("[Stats] Node " + this.getID() + " Message Rate: " +  this.getMessageRate() + "messages/s");
             this.log.logln("[Stats] Node " + this.getID() + " Replies Rate: " +  this.getRepliesRate() + "messages/s");
             this.log.logln("[Stats] Node " + this.getID() + " Requests Rate: " +  this.getRequestsRate() + "messages/s");
@@ -181,6 +184,9 @@ public class RATimestampNode extends LamportTimestampNode {
 
             this.statsLog.logln("***** " + "[Stats] Node " + this.getID() + " Round " + Global.getCurrentTime() + "*****");
 
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Message Total: " +  this.getTotalMessages() + "messages");
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Replies Total: " +  this.getTotalReplies() + "messages");
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Requests Total: " +  this.getTotalRequests() + "messages");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Message Rate: " +  this.getMessageRate() + "messages/s");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Replies Rate: " +  this.getRepliesRate() + "messages/s");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Requests Rate: " +  this.getRequestsRate() + "messages/s");

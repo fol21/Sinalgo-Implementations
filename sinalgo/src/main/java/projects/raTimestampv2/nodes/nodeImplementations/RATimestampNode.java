@@ -124,7 +124,6 @@ public class RATimestampNode extends LamportTimestampNode {
                     tiebreak
                 )
                 {
-                    // this.pendingMap.put(m.getNodeId(), false);
                     this.send(new RATimestampReplyMessage(this.getLamportTimestamp(), this.getID()), sendToNode); 
                 }
 
@@ -197,7 +196,10 @@ public class RATimestampNode extends LamportTimestampNode {
         if((int) Math.floor(Tools.getGlobalTime()) % 5000 == 0)
         {
             this.log.logln("***** " + "[Stats] Node " + this.getID() + " Round " + Global.getCurrentTime() + "*****");
-
+            
+            this.log.logln("[Stats] Node " + this.getID() + " Message Total: " +  this.getTotalMessages() + "messages");
+            this.log.logln("[Stats] Node " + this.getID() + " Replies Total: " +  this.getTotalReplies() + "messages");
+            this.log.logln("[Stats] Node " + this.getID() + " Requests Total: " +  this.getTotalRequests() + "messages");
             this.log.logln("[Stats] Node " + this.getID() + " Message Rate: " +  this.getMessageRate() + "messages/s");
             this.log.logln("[Stats] Node " + this.getID() + " Replies Rate: " +  this.getRepliesRate() + "messages/s");
             this.log.logln("[Stats] Node " + this.getID() + " Requests Rate: " +  this.getRequestsRate() + "messages/s");
@@ -207,6 +209,9 @@ public class RATimestampNode extends LamportTimestampNode {
 
             this.statsLog.logln("***** " + "[Stats] Node " + this.getID() + " Round " + Global.getCurrentTime() + "*****");
 
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Message Total: " +  this.getTotalMessages() + "messages");
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Replies Total: " +  this.getTotalReplies() + "messages");
+            this.statsLog.logln("[Stats] Node " + this.getID() + " Requests Total: " +  this.getTotalRequests() + "messages");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Message Rate: " +  this.getMessageRate() + "messages/s");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Replies Rate: " +  this.getRepliesRate() + "messages/s");
             this.statsLog.logln("[Stats] Node " + this.getID() + " Requests Rate: " +  this.getRequestsRate() + "messages/s");
@@ -237,9 +242,9 @@ public class RATimestampNode extends LamportTimestampNode {
                 this.requestTimestamp = this.getLamportTimestamp();
                 this.appEvent = ApplicationEvent.HOLD;
                 this.pending = this.getOutgoingConnections().size();
-                if(!this.pendingMap.values().contains(false)) {
-                    this.enterRegion();
-                }
+                // if(!this.pendingMap.values().contains(false)) {
+                //     this.enterRegion();
+                // }
                 for(Entry<Long, Boolean> p : this.pendingMap.entrySet())
                 {
                     if(!p.getValue())
@@ -271,19 +276,25 @@ public class RATimestampNode extends LamportTimestampNode {
     @NodePopupMethod(menuText="[App] Exit Region")
     public void appExitRegion() {
         try {
-            if(this.appEvent == ApplicationEvent.IN || this.appEvent == ApplicationEvent.HOLD)
+            if(this.appEvent == ApplicationEvent.IN)
             {
                 this.timesInRegionPerEvent.addSample(this.getLamportTimestamp() - this.requestTimestamp);
 
                 this.appEvent = ApplicationEvent.OUT;
                 this.pending = -1;
+                //v2
+                // for(Entry<Long, Boolean> p : this.pendingMap.entrySet())
+                // {
+                //     p.setValue(false);
+                // }
                 this.setColor(Color.BLACK);
                 this.log.logln("Node " + this.getID() + " is " + "OFF.");
                 if(this.replyDeferred.size() > 0)
                 {
                     for (Long l : this.replyDeferred) {
-                        this.log.logln("Node " + this.getID() + ": Deferring: "  + l);
+                        this.pendingMap.put(l, false); // Remove permissão den entrada na SC ao enviar reply
                         this.send(new RATimestampReplyMessage(this.getLamportTimestamp(), this.getID()), this.findEndNodeById(l));              
+                        this.log.logln("Node " + this.getID() + ": Deferring: "  + l);
                     }
                     this.replyDeferred.clear();
                 }
@@ -306,6 +317,11 @@ public class RATimestampNode extends LamportTimestampNode {
 
                 this.appEvent = ApplicationEvent.OUT;
                 this.pending = -1;
+                //v2
+                for(Entry<Long, Boolean> p : this.pendingMap.entrySet())
+                {
+                    p.setValue(false);
+                }
                 this.setColor(Color.BLACK);
                 this.log.logln("Node " + this.getID() + " is " + "OFF.");
                 if(this.replyDeferred.size() > 0)
