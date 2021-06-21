@@ -39,7 +39,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 this.log.logln(String.format("Node: %1$s Received Consensus message from: ", this.getID()));
                 if(this.chain.size() > m.getChainSize())
                 {
-                    this.log.logln("Node: " + this.getID() + " " + "send(" + m.getSource().toString() + ", CHAIN, " + this.chain.size() + ")");
+                    this.log.logln(String.format("Node: %1$s send(%2$s, CHAIN, %3$s)", this.getID(), m.getSource().getID(), this.chain.size()));
                     this.send(new BlockchainMessage(chain), m.getSource());
                 }
             }
@@ -50,21 +50,37 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 if(m.getBlock().getIndex() < this.chain.size())
                 {
                     this.log.logln(String.format("Node: %1$s Received outdated Block of index: %2$s", this.getID(), m.getBlock().getIndex()));
-                } else {
+                } else if(m.getBlock().getIndex() == this.chain.size()) {
                     this.log.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
                     blockbuffer.add(m.getBlock());
                     this.chain.append((AmbientalBlock) m.getBlock());
+                } else {
+                    this.log.logln(String.format("Node: %1$s Incoming block is from a chain ahead, index: incoming %2$s last: %3$s", 
+                        this.getID(), m.getBlock().getIndex(), this.chain.getLastBlock().getIndex()));
+
                 }
             }
             if(msg instanceof BlockchainMessage)
             {
                 BlockchainMessage m = (BlockchainMessage) msg;
                 this.log.logln(String.format("Node: %1$s Received Blockchain message from: ", this.getID()));
-                this.log.logln(String.format("%1$s ", m.getChain()));
-                if(m.getChain().size() > this.chain.size())
+                AmbientalBlockchain incoming = (AmbientalBlockchain) m.getChain();
+                if(incoming.size() > this.chain.size())
                 {
-                    this.log.logln("Node: " + this.getID() + " " + "Replacing for chain of size: " + m.getChain().size());
-                    this.chain = (AmbientalBlockchain) m.getChain();
+                    //Orphans Handling
+                    int beforeDiffIndex = Math.abs(incoming.size() - this.chain.size()) - 1;
+                    this.log.logln(String.format("Node: %1$s incoming: %2$s, current: %3$s, diff: %4$s", this.getID(), incoming.size(), this.chain.size(), beforeDiffIndex));
+                    boolean indexIsDifferent = beforeDiffIndex >= 0 ? incoming.elementAt(beforeDiffIndex) != this.chain.elementAt(beforeDiffIndex) : false;
+                    while(indexIsDifferent && beforeDiffIndex >= 0)
+                    {
+                        this.orphans.add(this.chain.elementAt(beforeDiffIndex));
+                        this.log.logln(String.format("Node: %1$s Adding Orphan from index: %2$s", this.getID(), this.chain.elementAt(beforeDiffIndex).getId()));
+                        indexIsDifferent = --beforeDiffIndex >= 0 ? incoming.elementAt(beforeDiffIndex) != this.chain.elementAt(beforeDiffIndex) : false;
+                    }
+
+                    this.log.logln(String.format("Node: %1$s Replacing for chain of size: %2$s", this.getID(), incoming.size()));
+                    this.chain = incoming;
+                    
                 }
             }
         }
@@ -140,7 +156,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
             pt,
             highlight,
             String.format("%1$s(chain:%2$s |last:%3$s)", this.getID(), this.chain.size(), idx),
-            16,
+            12,
             Color.WHITE
         );
     }

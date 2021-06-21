@@ -29,7 +29,7 @@ public abstract class Blockchain<T extends Block> extends DoublyLinkedList<T> {
 
     public T getLastBlock()
     {
-        return super.size() > 0 ? super.elementAt( super.size() - 1) : null;
+        return super.size() > 0 ? super.elementAt(super.size() - 1) : null;
     }
 
     public boolean validate()
@@ -45,6 +45,13 @@ public abstract class Blockchain<T extends Block> extends DoublyLinkedList<T> {
             } 
         }
         return valid;
+    }
+
+    public boolean validateLast()
+    {      
+        return this.size() >= 2 ?
+            this.getLastBlock().getPrevious() == DigestUtils.sha1Hex((new Gson()).toJson(super.elementAt(super.size() - 2).toDto())) :
+            true;
     }
 
     public String toJson()

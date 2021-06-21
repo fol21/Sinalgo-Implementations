@@ -8,7 +8,6 @@ import sinalgo.nodes.messages.Message;
 
 @Getter
 @Setter
-@AllArgsConstructor
 public class ConsensusMessage extends AdressedMessage {
     
     private long chainSize;
