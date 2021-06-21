@@ -50,7 +50,8 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 if(m.getBlock().getIndex() < this.chain.size())
                 {
                     this.log.logln(String.format("Node: %1$s Received outdated Block of index: %2$s", this.getID(), m.getBlock().getIndex()));
-                } else if(m.getBlock().getIndex() == this.chain.size()) {
+                } else if(m.getBlock().getIndex() == this.chain.size() && this.chain.validateLast((AmbientalBlock) m.getBlock())) 
+                {
                     this.log.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
                     blockbuffer.add(m.getBlock());
                     this.chain.append((AmbientalBlock) m.getBlock());

@@ -8,7 +8,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import lombok.Getter;
 import lombok.Setter;
-import nonapi.io.github.classgraph.json.JSONSerializer;
 import sinalgo.tools.storage.DoublyLinkedList;
 import sinalgo.tools.storage.ReusableListIterator;
 
@@ -47,8 +46,30 @@ public abstract class Blockchain<T extends Block> extends DoublyLinkedList<T> {
         return valid;
     }
 
+    public boolean validate(Blockchain<T> chain)
+    {
+        boolean valid = true;
+        ReusableListIterator<T> it = chain.iterator();
+        while(it.hasNext() && valid)
+        {
+            T prev = it.next();
+            if(it.hasNext()) {
+                T curr = it.next();
+                valid = curr.getPrevious() == DigestUtils.sha1Hex((new Gson()).toJson(prev.toDto()));
+            } 
+        }
+        return valid;
+    }
+
+    public boolean validateLast(T block)
+    { 
+        return this.size() >= 1 ?
+            block.getPrevious() == DigestUtils.sha1Hex((new Gson()).toJson(super.elementAt(super.size() - 1).toDto())) :
+            true;
+    }
+
     public boolean validateLast()
-    {      
+    { 
         return this.size() >= 2 ?
             this.getLastBlock().getPrevious() == DigestUtils.sha1Hex((new Gson()).toJson(super.elementAt(super.size() - 2).toDto())) :
             true;
