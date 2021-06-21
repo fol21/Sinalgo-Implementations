@@ -1,6 +1,8 @@
 package projects.blockchain.nodes.blockchain;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+
+import com.google.gson.Gson;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -12,37 +14,54 @@ import sinalgo.tools.storage.ReusableListIterator;
 
 @Getter
 @Setter
-public class Blockchain extends DoublyLinkedList<Block> {
+public abstract class Blockchain<T extends Block> extends DoublyLinkedList<T> {
     
     @Override
-    public boolean append(Block b)
+    public boolean append(T b)
     {  
         //Hash(previous)
         if(this.size() > 0)
         {
-             b.setPrevious(DigestUtils.sha1Hex(JSONSerializer.serializeObject(super.elementAt(super.size() - 1).toDto())));
+             b.setPrevious(DigestUtils.sha1Hex((new Gson()).toJson(super.elementAt(super.size() - 1).toDto())));
         }
         return super.append(b);
     }
 
-    public Block getLastBlock()
+    public T getLastBlock()
     {
-        return super.elementAt(super.size() - 1);
+        return super.size() > 0 ? super.elementAt( super.size() - 1) : null;
     }
 
     public boolean validate()
     {
         boolean valid = true;
-        ReusableListIterator<Block> it = super.iterator();
+        ReusableListIterator<T> it = super.iterator();
         while(it.hasNext() && valid)
         {
-            Block prev = it.next();
+            T prev = it.next();
             if(it.hasNext()) {
-                Block curr = it.next();
-                valid = curr.getPrevious() == DigestUtils.sha1Hex(JSONSerializer.serializeObject(prev.toDto()));
+                T curr = it.next();
+                valid = curr.getPrevious() == DigestUtils.sha1Hex((new Gson()).toJson(prev.toDto()));
             } 
         }
         return valid;
+    }
+
+    public String toJson()
+    {
+        ArrayList<BlockDto> list = new ArrayList<BlockDto>();
+        ReusableListIterator<T> it = super.iterator();
+        while(it.hasNext())
+        {
+            list.add(it.next().toDto());
+        }
+        return (new Gson()).toJson(list);
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format("Chain: {size: %1$s, genesis: %2$s, last: %3$s}", this.size(), this.elementAt(0).getId(), this.getLastBlock().getId());
     }
 
 }

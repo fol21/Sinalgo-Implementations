@@ -150,8 +150,7 @@
         <defaultConnectivityModel value="UDG"/>
 
         <!--Default distribution model used when none is specified -->
-        <defaultDistributionModel value="Random"/>
-
+        <defaultDistributionModel value="Circle"/>
         <!--Default interference model used when none is specified -->
         <defaultInterferenceModel value="NoInterference"/>
 
@@ -162,7 +161,7 @@
         <defaultReliabilityModel value="ReliableDelivery"/>
 
         <!--Default node implementation used when none is specified -->
-        <defaultNodeImplementation value="DummyNode"/>
+        <defaultNodeImplementation value="blockchain:AmbientalBlockchainNode"/>
 
         <!--*********************************************************************** -->
         <!-- Node storage, position transformation -->
@@ -233,9 +232,9 @@
 
         <Node defaultSize="10"/>
 
-        <GeometricNodeCollection rMax="100"/>
+        <GeometricNodeCollection rMax="1000"/>
 
-        <UDG rMax="100"/>
+        <UDG rMax="1000"/>
 
         <SINR alpha="2" beta="0.7" noise="0"/>
 
@@ -254,4 +253,3 @@
               connectionProbability="0.6"/>
     </Custom>
 </Document>
-

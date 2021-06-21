@@ -30,3 +30,10 @@ Blockchain para registros de ações de recuperação ambiental feita por instit
 - Transação
 - Valor
 - Hash anterior
+
+
+### **KPIs**
+
+- Orfãos
+- Quantidades de Consensus
+- Troca de cadeias
