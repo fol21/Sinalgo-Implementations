@@ -415,6 +415,7 @@ public class InviteNode extends Node {
 		this.up = new ArrayList<Node>();
 		this.upSet = new ArrayList<Node>();
 		this.others = new ArrayList<Node>();
+		this.setColor(Color.BLUE);
 	}
 
 
@@ -471,9 +472,9 @@ public class InviteNode extends Node {
 
 	private void log(String message) {
 		if (IamCoordinator())
-			this.logging.logln("STEP " + ((int) (Math.round(Global.getCurrentTime()))) + "- Node  " + this.getID() + ": " + message);
+			this.logging.logln("Node  " + this.getID() + ": " + message);
 		else
-			this.logging.logln("STEP " + ((int) (Math.round(Global.getCurrentTime()))) + "- Coord " + this.getID() + ": " + message);
+			this.logging.logln("Coord " + this.getID() + ": " + message);
 	}
 
 	private boolean flipTheCoin() {

@@ -2,6 +2,7 @@ package projects.blockchain.nodes.nodeImplementations;
 
 import com.google.gson.Gson;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import projects.blockchain.nodes.blockchain.ambiental.AmbientalBlock;
 import projects.blockchain.nodes.blockchain.ambiental.AmbientalBlockchain;
@@ -15,6 +16,7 @@ import sinalgo.nodes.messages.Message;
 import sinalgo.tools.Tools;
 
 import java.awt.*;
+import java.util.Random;
 
 
 @Getter
@@ -23,6 +25,9 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
     private String savedTransaction = null;
     
     private double savedValor = -1;
+
+    @Getter(AccessLevel.PRIVATE)
+    private Random random = new Random();
 
     @Override
     public void handleMessages(Inbox inbox) {
@@ -40,6 +45,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 if(this.chain.size() > m.getChainSize())
                 {
                     this.log.logln(String.format("Node: %1$s send(%2$s, CHAIN, %3$s)", this.getID(), m.getSource().getID(), this.chain.size()));
+                    this.chainLog.logln(String.format("Node: %1$s send(%2$s, CHAIN, %3$s)", this.getID(), m.getSource().getID(), this.chain.size()));
                     this.send(new BlockchainMessage(chain), m.getSource());
                 }
             }
@@ -53,6 +59,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 } else if(m.getBlock().getIndex() == this.chain.size() && this.chain.validateLast((AmbientalBlock) m.getBlock())) 
                 {
                     this.log.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
+                    this.blocksLog.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
                     blockbuffer.add(m.getBlock());
                     this.chain.append((AmbientalBlock) m.getBlock());
                 } else {
@@ -69,26 +76,24 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
                 if(incoming.size() > this.chain.size())
                 {
                     //Orphans Handling
-                    int beforeDiffIndex = Math.abs(incoming.size() - this.chain.size()) - 1;
+                    int beforeDiffIndex = this.chain.size() - 1;
                     this.log.logln(String.format("Node: %1$s incoming: %2$s, current: %3$s, diff: %4$s", this.getID(), incoming.size(), this.chain.size(), beforeDiffIndex));
                     boolean indexIsDifferent = beforeDiffIndex >= 0 ? incoming.elementAt(beforeDiffIndex) != this.chain.elementAt(beforeDiffIndex) : false;
                     while(indexIsDifferent && beforeDiffIndex >= 0)
                     {
                         this.orphans.add(this.chain.elementAt(beforeDiffIndex));
                         this.log.logln(String.format("Node: %1$s Adding Orphan from index: %2$s", this.getID(), this.chain.elementAt(beforeDiffIndex).getId()));
+                        this.orphansLog.logln(String.format("Node: %1$s Adding Orphan from index: %2$s", this.getID(), this.chain.elementAt(beforeDiffIndex).getId()));
                         indexIsDifferent = --beforeDiffIndex >= 0 ? incoming.elementAt(beforeDiffIndex) != this.chain.elementAt(beforeDiffIndex) : false;
                     }
 
                     this.log.logln(String.format("Node: %1$s Replacing for chain of size: %2$s", this.getID(), incoming.size()));
+                    this.chainLog.logln(String.format("Node: %1$s Replacing for chain of size: %2$s", this.getID(), incoming.size()));
                     this.chain = incoming;
                     
                 }
             }
         }
-    }
-
-    @Override
-    public void preStep() {
     }
 
     @Override
@@ -98,6 +103,20 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
     
     @Override
     public void neighborhoodChange() {
+    }
+
+    @Override
+    public void preStep() {
+        if(Tools.getGlobalTime() % 100 == 0 && random.nextDouble() >= .5)
+        {
+            this.testTransaction();
+            this.bypass();
+            this.addBlock();
+        }
+        else if (Tools.getGlobalTime() % 1000 == 0)
+        {
+            this.consensus();
+        }
     }
 
     @Override
@@ -123,6 +142,13 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
         }
         return null;
     }
+
+    public void testTransaction(String transaction, double valor)
+    {
+        this.savedTransaction = transaction;
+        this.savedValor = valor;
+        this.log.logln(String.format("Node: %1$s saved transaction: %2$s, valor: %3$s", this.getID(), this.savedTransaction, this.savedValor));
+    }
     
     /** Node Actions */
     @NodePopupMethod(menuText="[Ambiental] Bypass")
@@ -134,8 +160,8 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
         this.log.logln(String.format("Node: %1$s  bypasses PoSp [%2$s]", this.getID(), this.chain.getSponsorships()));
     }
 
-    @NodePopupMethod(menuText="[Ambiental] test")
-    public void test()
+    @NodePopupMethod(menuText="[Ambiental] test transaction")
+    public void testTransaction()
     {
         this.savedTransaction = "add";
         this.savedValor = Tools.getRandomNumberGenerator().nextDouble();
@@ -152,7 +178,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
     @Override
     public void draw(Graphics g, PositionTransformation pt, boolean highlight) {
         long idx = this.chain.getLastBlock() != null ? this.chain.getLastBlock().getIndex() : -1;
-        super.drawNodeAsSquareWithText(
+        super.drawNodeAsDiskWithText(
             g,
             pt,
             highlight,

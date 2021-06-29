@@ -233,19 +233,19 @@
 
         <Node defaultSize="10"/>
 
-        <GeometricNodeCollection rMax="333"/>
+        <GeometricNodeCollection rMax="666"/>
 
-        <UDG rMax="333"/>
+        <UDG rMax="666"/>
 
         <SINR alpha="2" beta="0.7" noise="0"/>
 
         <RandomWayPoint>
-            <Speed distribution="Gaussian" mean="1" variance="2"/>
+            <Speed distribution="Gaussian" mean="0.1" variance="0.2"/>
             <WaitingTime distribution="Poisson" lambda="100"/>
         </RandomWayPoint>
 
         <RandomDirection>
-            <NodeSpeed distribution="Gaussian" mean="1" variance="2"/>
+            <NodeSpeed distribution="Gaussian" mean="0.1" variance="0.2"/>
             <WaitingTime distribution="Poisson" lambda="100"/>
             <MoveTime distribution="Uniform" min="5" max="20"/>
         </RandomDirection>

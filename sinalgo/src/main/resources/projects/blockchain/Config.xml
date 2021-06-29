@@ -80,7 +80,7 @@
 
         <!--Redirects the default log file to the console. No logfile will be created
             if set to true. -->
-        <outputToConsole value="true"/>
+        <outputToConsole value="false"/>
 
         <!--Indicates whether all log-files of the current simulation are stored
             in a new directory. The name of the new directory is given by the string-representation
@@ -150,12 +150,12 @@
         <defaultConnectivityModel value="UDG"/>
 
         <!--Default distribution model used when none is specified -->
-        <defaultDistributionModel value="Circle"/>
+        <defaultDistributionModel value="Random"/>
         <!--Default interference model used when none is specified -->
         <defaultInterferenceModel value="NoInterference"/>
 
         <!--Default mobility model used when none is specified -->
-        <defaultMobilityModel value="NoMobility"/>
+        <defaultMobilityModel value="RandomWayPoint"/>
 
         <!--Default reliability model used when none is specified -->
         <defaultReliabilityModel value="ReliableDelivery"/>
@@ -232,19 +232,19 @@
 
         <Node defaultSize="10"/>
 
-        <GeometricNodeCollection rMax="1000"/>
+        <GeometricNodeCollection rMax="500"/>
 
-        <UDG rMax="1000"/>
+        <UDG rMax="500"/>
 
         <SINR alpha="2" beta="0.7" noise="0"/>
 
         <RandomWayPoint>
-            <Speed distribution="Gaussian" mean="10" variance="20"/>
+            <Speed distribution="Gaussian" mean="1" variance="2"/>
             <WaitingTime distribution="Poisson" lambda="10"/>
         </RandomWayPoint>
 
         <RandomDirection>
-            <NodeSpeed distribution="Gaussian" mean="10" variance="20"/>
+            <NodeSpeed distribution="Gaussian" mean="1" variance="2"/>
             <WaitingTime distribution="Poisson" lambda="10"/>
             <MoveTime distribution="Uniform" min="5" max="20"/>
         </RandomDirection>

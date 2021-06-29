@@ -28,6 +28,8 @@ public abstract class BlockchainNode<T extends Blockchain> extends Node {
 
     Logging log = Logging.getLogger();
     Logging chainLog = Logging.getLogger("blockchain/chain.txt");
+    Logging blocksLog = Logging.getLogger("blockchain/blocks.txt");
+    Logging orphansLog = Logging.getLogger("blockchain/orphans.txt");
 
     @Override
     public String toString() {
@@ -75,18 +77,20 @@ public abstract class BlockchainNode<T extends Blockchain> extends Node {
         }
     }
     @NodePopupMethod(menuText="[BC] Add Block")
-    public void addtBlock()
+    public void addBlock()
     {
         this.log.logln(String.format("Node: %1$s is broadcasting block...", this.getID()));
         Block block = this.processBlock();
-        this.chain.append(block);
+        if(block !=null)
+            this.chain.append(block);
     }
     @NodePopupMethod(menuText="[BC] Broadcast Block")
     public void broadcastBlock()
     {
         this.log.logln(String.format("Node: %1$s is broadcasting block...", this.getID()));
         Block block = this.processBlock();
-        this.chain.append(block);
+        if(block !=null)
+            this.chain.append(block);
         int span = 1000;
         if(block !=null)
         {
