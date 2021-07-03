@@ -36,9 +36,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package projects.blockchain;
 
+import sinalgo.nodes.Node;
 import sinalgo.runtime.AbstractCustomGlobal;
+import sinalgo.runtime.nodeCollection.AbstractNodeCollection;
+import sinalgo.tools.Tools;
+import sinalgo.tools.logging.Logging;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import javax.swing.*;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+
+import projects.blockchain.csv.PathEnum;
+import projects.blockchain.csv.models.ChainSizeEntry;
+import projects.blockchain.nodes.nodeImplementations.AmbientalBlockchainNode;
 
 /**
  * This class holds customized global state and methods for the framework. The
@@ -60,6 +78,11 @@ import javax.swing.*;
  * or via a button that is added to the GUI.
  */
 public class CustomGlobal extends AbstractCustomGlobal {
+
+
+    Logging logging = Logging.getLogger();
+
+    ArrayList<ChainSizeEntry> chainSizeHistory = new ArrayList<ChainSizeEntry>();
 
     @Override
     public boolean hasTerminated() {
@@ -86,5 +109,124 @@ public class CustomGlobal extends AbstractCustomGlobal {
     @AbstractCustomGlobal.CustomButton(buttonText = "GO", toolTipText = "A sample button")
     public void sampleButton() {
         JOptionPane.showMessageDialog(null, "You Pressed the 'GO' button.");
+    }
+
+    @Override
+    public void preRun()
+    {
+      this.logging.logln("******* Started Application ******");
+      try{
+        this.createCSVFile(PathEnum.TOTAL_ORPHANS.getPath());
+        this.createCSVFile(PathEnum.TOTAL_REPLACEMENTS.getPath());
+        this.createCSVFile(PathEnum.TOTAL_MESSAGES.getPath());
+      } catch (Exception e)
+      {
+        this.logging.logln(e.toString());
+      }
+    }
+
+    @Override
+    public void preRound()
+    {
+    }
+    @Override
+    public void postRound()
+    {
+      AbstractNodeCollection nodes = Tools.getNodeList();
+      for (Node n : nodes)
+      {
+        AmbientalBlockchainNode node = (AmbientalBlockchainNode) n;
+        this.chainSizeHistory.add(new ChainSizeEntry(node.getID(), (int) Tools.getGlobalTime(), node.getChain().size()));
+      }
+    }
+
+    @Override
+    public void onExit()
+    {
+      try
+      {
+        LinkedHashMap<Long, Integer> orphansMap = new LinkedHashMap<Long, Integer>();
+        LinkedHashMap<Long, Integer> replacementsMap = new LinkedHashMap<Long, Integer>();
+        LinkedHashMap<Long, Integer> messagesMap = new LinkedHashMap<Long, Integer>();
+        
+        AbstractNodeCollection nodes = Tools.getNodeList();
+        for (Node n : nodes)
+        {
+          AmbientalBlockchainNode node = (AmbientalBlockchainNode) n;
+          this.logging.logln(String.format("**** Node %1$s: total orphans: %2$s *****", node.getID(), node.getOrphans().size()));
+          orphansMap.put( node.getID(), node.getOrphans().size());
+          this.logging.logln(String.format("**** Node %1$s: total replacements: %2$s *****", node.getID(), node.getTotalChainReplacements()));
+          replacementsMap.put( node.getID(), node.getTotalChainReplacements());
+          this.logging.logln(String.format("**** Node %1$s: total messages: %2$s *****", node.getID(), node.getTotalMessages()));
+          messagesMap.put( node.getID(), node.getTotalMessages());
+
+          ArrayList<ChainSizeEntry> l = (ArrayList<ChainSizeEntry>) this.chainSizeHistory
+            .stream()
+            .filter((ChainSizeEntry entry) -> {
+              return entry.getID() == node.getID();
+            })
+            .collect(Collectors.toList());
+
+            this.createChainSizeCSVFile(String.format("%1$s_%2$s.csv", PathEnum.HISTORY_NODE_CHAIN_SIZE.getPath(), node.getID()), l);
+        }
+        
+        this.createTotalsCSVFile(PathEnum.TOTAL_ORPHANS.getPath(), orphansMap, "orphans");
+        this.createTotalsCSVFile(PathEnum.TOTAL_REPLACEMENTS.getPath(), replacementsMap, "replacements");
+        this.createTotalsCSVFile(PathEnum.TOTAL_MESSAGES.getPath(), messagesMap, "messages");
+        
+        
+        
+      } catch (Exception e) {
+        //TODO: handle exception
+      }
+      this.logging.logln("******* Exited Application ******");
+    }
+
+    private void createCSVFile(String path) throws IOException {
+      String[] HEADERS = { "round", "Node 1 messages"};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+
+      }
+    }
+    
+    private void createTotalsCSVFile(String path, LinkedHashMap<Long, Integer> map) throws IOException {
+      String[] HEADERS = { "Node ID", "KPI"};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+          for(Entry<Long, Integer> e : map.entrySet())
+          {
+            printer.printRecord(e.getKey(), e.getValue());
+          }
+      }
+    }
+    private void createTotalsCSVFile(String path, LinkedHashMap<Long, Integer> map, String kpiName) throws IOException {
+      String[] HEADERS = { "Node ID", kpiName};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+          for(Entry<Long, Integer> e : map.entrySet())
+          {
+            printer.printRecord(e.getKey(), e.getValue());
+          }
+      }
+    }
+
+    private void createChainSizeCSVFile(String path, ArrayList<ChainSizeEntry> entries) throws IOException {
+      String[] HEADERS = { "Node ID", "round", "size"};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+          for(ChainSizeEntry e : entries)
+          {
+            printer.printRecord(e.getID(), e.getRound(), e.getChainSize());
+          }
+      }
     }
 }

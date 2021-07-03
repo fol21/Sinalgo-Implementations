@@ -79,7 +79,6 @@ public abstract class BlockchainNode<T extends Blockchain> extends Node {
     @NodePopupMethod(menuText="[BC] Add Block")
     public void addBlock()
     {
-        this.log.logln(String.format("Node: %1$s is broadcasting block...", this.getID()));
         Block block = this.processBlock();
         if(block !=null)
             this.chain.append(block);
@@ -87,10 +86,11 @@ public abstract class BlockchainNode<T extends Blockchain> extends Node {
     @NodePopupMethod(menuText="[BC] Broadcast Block")
     public void broadcastBlock()
     {
-        this.log.logln(String.format("Node: %1$s is broadcasting block...", this.getID()));
         Block block = this.processBlock();
-        if(block !=null)
+        if(block !=null) {
             this.chain.append(block);
+        }
+        this.log.logln(String.format("Node: %1$s is broadcasting block...", this.getID()));
         int span = 1000;
         if(block !=null)
         {

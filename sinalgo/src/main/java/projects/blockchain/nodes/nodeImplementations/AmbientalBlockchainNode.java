@@ -16,6 +16,7 @@ import sinalgo.nodes.messages.Message;
 import sinalgo.tools.Tools;
 
 import java.awt.*;
+import java.util.LinkedHashMap;
 import java.util.Random;
 
 
@@ -29,13 +30,17 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
     @Getter(AccessLevel.PRIVATE)
     private Random random = new Random();
 
+    // KPis
+    private int totalChainReplacements = 0;
+    private int totalMessages = 0;
+
     @Override
     public void handleMessages(Inbox inbox) {
         while (inbox.hasNext())
         {
             this.setColor(Color.BLACK);
             //Stats
-            
+            this.totalMessages++;
             // Message Handle
             Message msg = inbox.next();
             if(msg instanceof ConsensusMessage)
@@ -52,20 +57,22 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
             if(msg instanceof BlockMessage)
             {
                 BlockMessage m = (BlockMessage) msg;
-                this.log.logln(String.format("Node: %1$s Received Block message from: ", this.getID()));
-                if(m.getBlock().getIndex() < this.chain.size())
+                if(m.getBlock() != null)
                 {
-                    this.log.logln(String.format("Node: %1$s Received outdated Block of index: %2$s", this.getID(), m.getBlock().getIndex()));
-                } else if(m.getBlock().getIndex() == this.chain.size() && this.chain.validateLast((AmbientalBlock) m.getBlock())) 
-                {
-                    this.log.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
-                    this.blocksLog.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
-                    blockbuffer.add(m.getBlock());
-                    this.chain.append((AmbientalBlock) m.getBlock());
-                } else {
-                    this.log.logln(String.format("Node: %1$s Incoming block is from a chain ahead, index: incoming %2$s last: %3$s", 
-                        this.getID(), m.getBlock().getIndex(), this.chain.getLastBlock().getIndex()));
-
+                    this.log.logln(String.format("Node: %1$s Received Block message of Index %2$s: ", this.getID(), m.getBlock().getIndex()));
+                    if(m.getBlock().getIndex() < this.chain.size())
+                    {
+                        this.log.logln(String.format("Node: %1$s Received outdated Block of index: %2$s", this.getID(), m.getBlock().getIndex()));
+                    } else if(m.getBlock().getIndex() == this.chain.size() && this.chain.validateLast((AmbientalBlock) m.getBlock())) 
+                    {
+                        this.log.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
+                        this.blocksLog.logln(String.format("Node: %1$s Received Block of index: %2$s, adding to chain...", this.getID(), m.getBlock().getIndex()));
+                        // this.blockbuffer.add(m.getBlock());
+                        this.chain.append((AmbientalBlock) m.getBlock());
+                    } else {
+                        this.log.logln(String.format("Node: %1$s Incoming block is from a chain ahead, index: incoming %2$s last: %3$s", 
+                            this.getID(), m.getBlock().getIndex(), this.chain.getLastBlock().getIndex()));
+                    }
                 }
             }
             if(msg instanceof BlockchainMessage)
@@ -89,6 +96,7 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
 
                     this.log.logln(String.format("Node: %1$s Replacing for chain of size: %2$s", this.getID(), incoming.size()));
                     this.chainLog.logln(String.format("Node: %1$s Replacing for chain of size: %2$s", this.getID(), incoming.size()));
+                    this.totalChainReplacements++;
                     this.chain = incoming;
                     
                 }
@@ -111,9 +119,10 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
         {
             this.testTransaction();
             this.bypass();
-            this.addBlock();
+            // this.addBlock();
+            this.broadcastBlock();
         }
-        else if (Tools.getGlobalTime() % 1000 == 0)
+        else if (Tools.getGlobalTime() % 500 == 0 && random.nextDouble() >= .5)
         {
             this.consensus();
         }
@@ -187,4 +196,8 @@ public class AmbientalBlockchainNode extends BlockchainNode<AmbientalBlockchain>
             Color.WHITE
         );
     }
+
+    //#region utils
+
+    //#endregion
 }

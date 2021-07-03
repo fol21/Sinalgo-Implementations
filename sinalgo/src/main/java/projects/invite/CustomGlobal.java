@@ -36,9 +36,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package projects.invite;
 
+import sinalgo.nodes.Node;
 import sinalgo.runtime.AbstractCustomGlobal;
+import sinalgo.runtime.Global;
+import sinalgo.runtime.nodeCollection.AbstractNodeCollection;
+import sinalgo.tools.Tools;
+import sinalgo.tools.logging.Logging;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map.Entry;
 
 import javax.swing.*;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+
+import projects.invite.nodes.nodeImplementations.InviteNode;
 
 /**
  * This class holds customized global state and methods for the framework. The
@@ -60,6 +76,10 @@ import javax.swing.*;
  * or via a button that is added to the GUI.
  */
 public class CustomGlobal extends AbstractCustomGlobal {
+
+    Logging logging = Logging.getLogger();
+
+    LinkedHashMap<Integer, Double> NODE_1_MESSAGES = new LinkedHashMap<Integer, Double>();
 
     @Override
     public boolean hasTerminated() {
@@ -86,5 +106,76 @@ public class CustomGlobal extends AbstractCustomGlobal {
     @AbstractCustomGlobal.CustomButton(buttonText = "GO", toolTipText = "A sample button")
     public void sampleButton() {
         JOptionPane.showMessageDialog(null, "You Pressed the 'GO' button.");
+    }
+
+    @Override
+    public void preRun()
+    {
+      this.logging.logln("******* Started Application ******");
+      try{
+        this.createCSVFile("C:\\Users\\usuario\\Downloads\\invite_report.csv");
+      } catch (Exception e)
+      {
+        this.logging.logln(e.toString());
+      }
+    }
+
+    @Override
+    public void preRound()
+    {
+    }
+    @Override
+    public void postRound()
+    {
+      AbstractNodeCollection nodes = Tools.getNodeList();
+      for (Node n : nodes)
+      {
+        try {
+          if(n.getID() == 1)
+          {
+            InviteNode node = (InviteNode) n;
+            NODE_1_MESSAGES.put(node.getMessages(), Tools.getGlobalTime());
+            this.createCSVFile("C:\\Users\\usuario\\Downloads\\invite_report.csv", NODE_1_MESSAGES);
+            this.logging.logln(String.format("***** Node %1$s: messages: %2$s in %3$s round *****", node.getID(), node.getMessages(), Tools.getGlobalTime()));
+          }
+        } catch (Exception e) {
+          //TODO: handle exception
+        }
+      }
+    }
+
+    @Override
+    public void onExit()
+    {
+      AbstractNodeCollection nodes = Tools.getNodeList();
+      for (Node n : nodes)
+      {
+        InviteNode node = (InviteNode) n;
+        this.logging.logln(String.format("**** Node %1$s: total messages: %2$s *****", node.getID(), node.getMessages()));
+      }
+      this.logging.logln("******* Exited Application ******");
+    }
+
+    private void createCSVFile(String path) throws IOException {
+      String[] HEADERS = { "round", "Node 1 messages"};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+
+      }
+    }
+    
+    private void createCSVFile(String path, LinkedHashMap<Integer, Double> map) throws IOException {
+      String[] HEADERS = { "Node 1 messages", "round"};
+
+      FileWriter out = new FileWriter(path);
+      try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+        .withHeader(HEADERS))) {
+          for(Entry<Integer, Double> e : map.entrySet())
+          {
+            printer.printRecord(e.getKey(), e.getValue());
+          }
+      }
     }
 }

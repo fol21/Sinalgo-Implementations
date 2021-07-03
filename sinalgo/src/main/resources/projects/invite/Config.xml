@@ -80,7 +80,7 @@
 
         <!--Redirects the default log file to the console. No logfile will be created
             if set to true. -->
-        <outputToConsole value="true"/>
+        <outputToConsole value="false"/>
 
         <!--Indicates whether all log-files of the current simulation are stored
             in a new directory. The name of the new directory is given by the string-representation
@@ -233,9 +233,9 @@
 
         <Node defaultSize="10"/>
 
-        <GeometricNodeCollection rMax="666"/>
+        <GeometricNodeCollection rMax="333"/>
 
-        <UDG rMax="666"/>
+        <UDG rMax="333"/>
 
         <SINR alpha="2" beta="0.7" noise="0"/>
 
