@@ -22,6 +22,9 @@ target/
 .gradle
 /build/
 
+#VS Code
+.vscode
+
 # Ignore Gradle GUI config
 gradle-app.setting
 
@@ -30,3 +33,6 @@ gradle-app.setting
 
 # Cache of project
 .gradletasknamecache
+
+# Sinalgo
+/bin
